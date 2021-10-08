@@ -11,41 +11,37 @@ import random
 
 
 class Environment:
-    def __init__(self, N, M, na, nb, agents):
+    def __init__(self, N, M, na, nb, nb_agents):
         self.N = N
         self.M = M
-        make_object_grid(N, M, na, nb)
-        make_agent_grid(N, M, agents)
+        self.na = na
+        self.nb = nb
+        self.nb_agents = nb_agents
+        make_object_grid()
+        init_agents(nb_agents)
 
-    def make_object_grid(self, N, M, na, nb):
-        self.object_grid = [["0" for _ in range(M)] for _ in range(N)]
-        self.init_objects(na, nb)
+    def make_object_grid(self):
+        self.object_grid = [["0" for _ in range(self.M)] for _ in range(self.N)]
+        self.init_objects()
 
-    def init_objects(self, na, nb):
+    def init_objects(self):
         """Instantiation of multiple objects on the object grid."""
 
         full_grid = [(row, col) for row in range(self.N) for col in range(self.M)]
-        random_positions = random.sample(full_grid, na + nb)
-        random_object_category = random.sample(na * "A" + nb * "B")
+        random_positions = random.sample(full_grid, self.na + self.nb)
+        random_object_category = random.sample(self.na * "A" + self.nb * "B")
 
         for (row, col), category in zip(random_positions, random_object_category):
             self.object_grid[row][col] = category
 
-    def make_agent_grid(self, N, M, agents):
-        """As we differentiate agents and objects, we have to create one grid for each."""
 
-        self.agent_grid = [["0" for col in range(M)] for row in range(N)]
-        self.init_agents(agents)
-
-    def init_agents(self, agents):
+    def init_agents(self):
         """Random instantiation of the agents on the agent_grid."""
         full_grid = [(row, col) for row in range(self.N) for col in range(self.M)]
-        random_positions = random.sample(full_grid, len(agents))
-        self.agents = {}
+        random_positions = random.sample(full_grid, self.nb_agents)
 
-        for (row, col), agent in zip(random_positions, agents.values()):
-            self.object_grid[row][col] = key
-            self.agents.update({agent.key: (row, col)})
+
+        self.agents = {key:(row,col) for key, (row, col) in zip(range(self.nb_agents), random_positions)}
 
     def is_valid_move(self, key, displacement):
         row, col = self.agents[key]
@@ -59,7 +55,8 @@ class Environment:
             return False
 
         # We check if there is an agent where the agent wishes to go
-        if self.agent_grid[row + drow][col + dcol] != "0":
+        if any(row + drow == agent_row and col + dcol == agent_col \
+            for (agent_row, agent_col) in self.agents.values()):
             return False
 
         return True
@@ -71,6 +68,14 @@ class Environment:
 
     def move_agent(self, key, displacement):
         pass
+
+    def agent_grid(self):
+        _agent_grid = [["0" for _ in range(self.M)] for _ in range(self.N)]
+
+        for key, (row, col) in self.agents.items():
+            _agent_grid[row][col] = key
+
+        return _agent_grid
 
 
 class Object:
