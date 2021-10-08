@@ -24,32 +24,31 @@ class Agent:
 
 
     def move(self, environment):
-        position = environment.agents[self.key]
-        environment.move(position)
-        row, col = position
         self.memory = environment.object_grid[row][col] + self.memory[0:-1]
-
         directions = [
                 (1,0), (1,1), (0,1), (-1,1),
                 (-1, 0), (-1, -1), (0, -1), (1, -1)
             ]
         random.shuffle(directions)
 
-        move = None
+        displacement = None
 
 
         try:
-            # This loop will look for a valid move
-            while not move:
-                move = directions.pop()  # We choose randomly a direction
+            # This loop will look for a valid displacement
+            while not displacement:
+                displacement = directions.pop()  # We choose randomly a direction
 
-                if self.is_valid_move(position, move):
+                if environment.is_valid_move(self.key, displacement):
                     break  # A valid direction has been found
                 else:
-                    move = None  # The move wasn't valid
+                    displacement = None  # The displacement wasn't valid
 
         # No direction is valid so the agent doesn't move
         except IndexError:
-            move = (0, 0)
+            displacement = (0, 0)
+
+
+
 
 

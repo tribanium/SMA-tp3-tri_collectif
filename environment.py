@@ -43,12 +43,12 @@ class Environment:
         random_positions = random.sample(full_grid, len(agents))
         self.agents = {}
 
-        for (row, col), agent in zip(agents, random_positions):
-            self.object_grid[row][col] = agent
+        for (row, col), agent in zip(random_positions, agents.values()):
+            self.object_grid[row][col] = key
             self.agents.update({agent.key: (row, col)})
 
-    def is_valid_move(self, position, displacement):
-        row, col = position
+    def is_valid_move(self, key, displacement):
+        row, col = self.agents[key]
         drow, dcol = displacement
 
         # We check that the case after the displacement is actually on the grid.
@@ -63,6 +63,14 @@ class Environment:
             return False
 
         return True
+
+
+    def move_object(self, key, displacement):
+        pass
+
+
+    def move_agent(self, key, displacement):
+        pass
 
 
 class Object:
