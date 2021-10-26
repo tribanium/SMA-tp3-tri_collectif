@@ -11,120 +11,77 @@ Module with a class Agent used to modelize an agent in a multi-agent system.
 
 
 class Agent:
-    def __init__(self, key, kplus, kminus):
+    def __init__(self, key, kplus, kminus, memory_buffer_size=15, error_rate=0.):
         self.memory = ""
         self.key = key
         self.kplus = kplus
         self.kminus = kminus
-        self.is_binded_with = None
+        self.memory_buffer_size = memory_buffer_size
+        self.bound_object = None
+        self.error_rate = error_rate
 
     def perception(self, environment):
-        """Looks at the current case, updates memory and returns cell data"""
-        obj_class, _ = environment.get_case_data(self.key)
-
-        if self.memory:
-            if len(self.memory) == 15:
-                self.memory = obj_class + self.memory[0:-1]
-            else:
-                self.memory = obj_class + self.memory
-        else:
-            self.memory = obj_class
+        return environment.perception(self.key)
 
     def action(self, environment):
-        """Either pick an object, or if an object was already picked, drops it,
-        or move randomly"""
+        _, _, object_free_cells_around, agent_free_cells_around = self.perception(
+            environment)
 
-        # If an object is binded, do we drop it ?
-        if self.is_binded_with:
-            if self.probability_dropping_object():
-                self.is_binded_with = None
-                return
+        if self.is_bound_with:
+            available_directions = [
+                dir for dir in agent_free_cells_around if dir in object_free_cells_around]
 
-        # If an object is on the case with no object binded, do we pick it ?
-        elif self.memory[0] != '0':
-            if self.probability_picking_object():
-                _, obj_key = environment.get_case_data(self.key)
-                self.is_binded_with = obj_key
-                return
+            if available_directions:
+                direction = random.choice(available_directions)
 
-        # If we are here, no object has been picked or dropped, so the agent
-        # moves randomly
-
-        # We look for a valid displacement
-        displacement = self.find_displacement(environment)
-
-        # We move the agent, and if needed the object accordingly
-        environment.move_agent(self.key, displacement)
-        if self.is_binded_with:
-            environment.move_object(self.is_binded_with, displacement)
-
-    def probability_picking_object(self):
-        """Computes the probability p of picking an object, using the memory as
-        an approximation of the environment and draws True or False according
-        to this Bernoulli distribution"""
-        obj_category = self.memory[0]  # Last cell data
-        f = self.memory.count(obj_category)/len(self.memory)
-        p = (self.kplus/(self.kplus + f))**2
-        result = np.random.binomial(1, p)
-        return bool(result)
-
-    def probability_dropping_object(self):
-        """Computes the probability p of dropping an object, using the memory
-        as an approximation of the environment and draws True or False
-        according to this Bernoulli distribution"""
-        obj_category = self.memory[0]  # Last cell data
-        f = self.memory.count(obj_category)/len(self.memory)
-        p = (f/(self.kminus + f))**2
-        result = np.random.binomial(1, p)
-        return bool(result)
-
-    def find_displacement(self, environment):
-        """Returns a displacement suitable for the agent, and if the agent is
-        bound to an object, a displacement that is also suitable for the object
-        """
-        directions = [
-            (1, 0),
-            (1, 1),
-            (0, 1),
-            (-1, 1),
-            (-1, 0),
-            (-1, -1),
-            (0, -1),
-            (1, -1),
-        ]
-
-        random.shuffle(directions)
-        # TODO : change probabilities to reflect that cases
-        # with an object are more attractive and that directions aren't equal
-        # in probabilities
-
-        displacement = None
-
-        # This loop will look for a valid displacement
-        while directions:
-            # We choose one element in the list of possible directions
-            displacement = directions.pop()
-
-            # We check if the displacement is valid
-
-            # Valid for the agent
-            valid_agent_move = environment.is_valid_agent_move(
-                self.key, displacement)
-
-            # And valid for the object
-            if self.is_binded_with:
-                valid_object_move = environment.is_valid_object_move(
-                    self.is_binded_with, displacement)
-
-            # No object case, obviously valid
             else:
-                valid_object_move = True
+                direction = (0, 0)
 
-            # If the displacement is suitable for the object and
-            # the agent, we return it
-            if valid_agent_move and valid_object_move:
-                return displacement
+        else:
+            if agent_free_cells_around:
+                direction = random.choice(agent_free_cells_around)
 
-        # No direction is valid so the agent doesn't move at this stage
-        displacement = (0, 0)
-        return displacement
+            else:
+                direction = (0, 0)
+
+        environment.move_agent(self.key, direction)
+        if self.is_bound_with:
+            environment.move_object(self.bound_object.key, direction)
+
+        cell = environment.get_agent_cell(self.key)
+
+        if self.bound_object:
+            category = self.bound_object.category
+
+            if not cell.object and self.will_drop(category):
+                self.bound_object.is_bound = False
+                self.bound_object = None
+
+        elif cell.object:
+            if self.will_pick(cell.object.category):
+                self.bound_object = cell.object
+                cell.is_bound_with = self
+
+        self.update_memory(cell.object)
+
+    def update_memory(self, category):
+        if category is None:
+            category = '0'
+        if self.memory:
+            self.memory = category + self.memory[:-1]
+
+    def get_frequency(self, category):
+        if self.memory:
+            count = self.memory.count(category)
+            return count / len(self.memory)
+        return 0
+
+    def will_pick(self, category):
+        f = self.get_frequency(category)
+        p = (self.kplus / (self.kplus + f)) ** 2
+        return random.random() <= p
+
+    def will_drop(self, category):
+        f = self.get_frequency(category)
+        p = (f / (self.kminus + f)) ** 2
+        return random.random() <= p
