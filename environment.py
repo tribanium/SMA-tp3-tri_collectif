@@ -13,113 +13,112 @@ from agent import Agent
 
 
 class Environment:
-    def __init__(self, N, M, na, nb, n_agents, kplus, kminus, memory_buffer_size=15):
+    def __init__(self, N, M, na, nb, n_agents, kplus, kminus, memory_buffer_size=15, error_rate=0.):
         self.N = N
         self.M = M
-        self.na = na
-        self.nb = nb
 
-        self.n_agents = n_agents
-        self.kplus = kplus
-        self.kminus = kminus
-        self.memory_buffer_size = memory_buffer_size
+        self.grid = [[Cell(position=(row, col))
+                      for col in range(M)] for row in range(N)]
+        self.init_grid(na, nb, n_agents, kplus, kminus,
+                       memory_buffer_size, error_rate)
 
-        self.grid = [[Cell() for _ in range(M)] for _ in range(N)]
-        self.init_grid()
+    def init_grid(self, na, nb, n_agents, kplus, kminus, memory_buffer_size, error_rate):
+        self.init_objects(na, nb)
+        self.init_agents(n_agents, kplus, kminus,
+                         memory_buffer_size, error_rate)
 
-    def init_grid(self):
-        self.init_objects()
-        self.init_agents()
-
-        for obj in self.objects:
+        for obj in self.objects.values():
             row, col = obj.position
-            self.grid[row][col].obj = obj
+            self.grid[row][col].object = obj
 
-        for agent_data in self.agents:
+        for agent_data in self.agents.values():
             row, col = agent_data.position
             self.grid[row][col].agent = agent_data.agent
 
-    def init_objects(self):
+    def init_objects(self, na, nb):
         """Instanciation of na objects of category A and nb objects of category B at
         na + nb random positions on the grid"""
 
         grid = [(row, col) for row in range(self.N)
                 for col in range(self.M)]
-        random_positions = random.sample(grid, self.na + self.nb)
+        random_positions = random.sample(grid, na + nb)
         random_object_category = random.sample(
-            self.na * "A" + self.nb * "B", self.na + self.nb)
+            na * "A" + nb * "B", na + nb)
 
         self.objects = {}
 
         for key, (category, position) in enumerate(zip(random_object_category, random_positions), 1):
-            self.objects[key] = Object(key, category, position)
+            row, col = position
+            cell = self.grid[row][col]
+            obj = Object(key, category, position, parent=cell)
+            self.objects[key] = obj
+            cell.object = obj
 
-    def init_agents(self):
+    def init_agents(self, n_agents, kplus, kminus, memory_buffer_size, error_rate):
         """Initialisation of the positions of the n_agents agents on the grid
         at n_agents random positions."""
         grid = [(row, col) for row in range(self.N)
                 for col in range(self.M)]
-        random_positions = random.sample(grid, self.n_agents)
+        random_positions = random.sample(grid, n_agents)
 
         self.agents = {}
-        self.agent_positions = [
-            [None for _ in range(self.M)] for _ in range(self.N)
-        ]
 
         for key, position in enumerate(random_positions, 1):
             # We instanciate an agent at the random position
             row, col = position
-            agent = Agent(key, self.kplus, self.kminus,
-                          self.memory_buffer_size)
+            cell = self.grid[row][col]
+            agent = Agent(key, kplus, kminus, memory_buffer_size, error_rate)
+            cell.agent = agent
 
             # We store this agent in an AgentData object that encapsulates the
             # agent and the position of the agent
-            self.agents[key] = AgentData(
-                agent=agent,
-                position=position)
+            self.agents[key] = AgentData(agent, position)
 
-    def perception(self, key, radius=1):
+    def valid_cell(self, row, col):
+        return 0 <= row < self.N and 0 <= col < self.M
+
+    def empty_cells(self, key, R=1):
         row, col = self.agents[key].position
+        iterable = ((r, c) for r in range(row-R, row+R+1)
+                    for c in range(col-R, col+R+1) if r != row or c != col)
+        empty = []
+        for row_, col_ in iterable:
+            if self.valid_cell(row_, col_) and self.grid[row_][col_].agent is None:
+                empty.append((row_, col_))
+        return empty
 
-        objects_around = []
-        agents_around = []
-        free_cells_around = []
+    def move(self, key, destination):
+        old_row, old_col = self.agents[key].position
+        row, col = destination
+        self.agents[key].position = destination
+        agent = self.grid[old_row][old_col].agent
+        self.grid[old_row][old_col].agent = None
+        if self.grid[row][col].agent is not None:
+            raise ValueError(
+                f"There is already an agent in {(row, col)} where the agent {key} wants to go. Check the integrity")
+        self.grid[row][col].agent = agent
 
-        for drow in range(-radius, radius+1):
-            for dcol in range(-radius, radius+1):
-                if drow == 0 and dcol == 0:
-                    continue
-
-                if 0 <= row+drow <= self.N and 0 <= col+dcol <= self.M:
-                    cell = self.grid[row][col]
-
-                    if cell.agent:
-                        direction = (drow, dcol)
-                        agents_around.append(direction)
-
-                    else:
-                        direction = (drow, dcol)
-                        free_cells_around.append(direction)
-
-                    if cell.object:
-                        object_data = {"direction": (
-                            drow, dcol), "category": cell.object.category}
-                        objects_around.append(object_data)
-
-            cell = environment.grid[row][col]
-
-        return cell, objects_around, agents_around, object_free_cells_around, agent_free_cells_around
+    def get_agent_cell(self, key):
+        row, col = self.agents[key].position
+        return self.grid[row][col]
 
 
 class Object:
-    def __init__(self, key, category, position):
+    def __init__(self, key, category, position, parent):
         self.key = key
         self.category = category
         self.position = position
-        self.is_bound_with = None
+        self.parent = parent
 
 
 class AgentData:
     def __init__(self, agent, position):
         self.agent = agent
         self.position = position
+
+
+class Cell:
+    def __init__(self, position, agent=None, obj=None):
+        self.position = position
+        self.agent = agent
+        self.object = obj
