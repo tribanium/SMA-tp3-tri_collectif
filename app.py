@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
 """
-Main module coding the loop
+Main module coding the loop of the multi-agent system. The scenario here is a 
+grid of dimensions NxM, with a number na of objects of class A, nb of objects 
+of class B, n_agents agents, and the purpose of the agents is to walk randomly, 
+and sort the objects with few rules described in Deneubourg, Jean-Louis et al. 
+“The dynamics of collective sorting robot-like ants and ant-like robots.”
+
+The main script is embedded in a Streamlit app, with a visualisation made with
+the Altair plotting library.
 
 @authors: Nathan Etourneau, Paul Flagel
 """
@@ -10,9 +18,12 @@ import random
 
 import streamlit as st
 import plotly.express as px
+import pandas as pd
+import altair as alt
 
 from agent import Agent
 from environment import Environment
+from visualization import update_altair_plot
 
 # Sidebar
 
@@ -36,7 +47,11 @@ MEMORY_BUFFER_SIZE = st.sidebar.number_input(
     label="Size of memory buffer ?", min_value=1, max_value=99999, value=15)
 N_ROUNDS = st.sidebar.number_input(
     label="Number of rounds ?", min_value=1, max_value=1000000000, value=500000)
+ERROR_RATE = st.sidebar.slider(
+    label="Error rate", min_value=0., max_value=1., value=0., step=0.05)
+
 start = st.sidebar.button("Run")
+_ = st.sidebar.button("Stop")
 
 # Layout
 
@@ -56,49 +71,30 @@ st.header('Graph of the objects')
 plot_placeholder = st.empty()
 
 
-def update_plot(env):
-    obj_rows = []
-    obj_cols = []
-    obj_category = []
-    for obj in env.objects.values():
-        row, col = obj.position
-
-        obj_rows.append(row)
-        obj_cols.append(col)
-        obj_category.append(obj.category)
-
-    data = {"rows": obj_rows, "cols": obj_cols, "category": obj_category}
-
-    fig = px.scatter(data, x="rows", y="cols",
-                     color="category", width=800, height=800)
-    fig.update_xaxes(range=[0-1, M+1])
-    fig.update_yaxes(range=[0-1, N+1])
-
-    return fig
-
-
-def main():
-    env = Environment(N, M, NA, NB, N_AGENTS, KPLUS,
-                      KMINUS, MEMORY_BUFFER_SIZE)
+def main(n_rounds, N, M, na, nb, n_agents, kplus, kminus, memory_buffer_size, error_rate):
+    env = Environment(N, M, na, nb, n_agents, kplus, kminus,
+                      memory_buffer_size, error_rate)
 
     # Loop
-    agent_keys = list(env.agents.keys())
+    keys = list(env.agents.keys())
 
-    for round in range(1, N_ROUNDS+1):
+    for round in range(1, n_rounds + 1):
         status.text(f'Round n°{round}/{N_ROUNDS}')
         round_progress_bar.progress(round/N_ROUNDS)
 
         # Shuffle the agents to mimic the fact that the movement is erratic
-        random.shuffle(agent_keys)
+        random.shuffle(keys)
 
-        for key in agent_keys:
+        for key in keys:
             agent = env.agents[key].agent
-            agent.perception(env)
-            agent.action(env)
-        if round % 300 == 0 or round == 1:
-            fig = update_plot(env)
-            plot_placeholder.plotly_chart(fig, use_container_width=True)
+            empty_cells = agent.perception(env)
+            agent.action(env, empty_cells)
+
+        if round % 50 == 0 or round == 1:
+            fig = update_altair_plot(env)
+            plot_placeholder.altair_chart(fig, use_container_width=True)
 
 
 if start:
-    main()
+    main(N_ROUNDS, N, M, NA, NB, N_AGENTS, KPLUS,
+         KMINUS, MEMORY_BUFFER_SIZE, ERROR_RATE)
