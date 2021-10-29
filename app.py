@@ -17,11 +17,7 @@ the Altair plotting library.
 import random
 
 import streamlit as st
-import plotly.express as px
-import pandas as pd
-import altair as alt
 
-from agent import Agent
 from environment import Environment
 from visualization import update_altair_plot
 
