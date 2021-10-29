@@ -19,7 +19,7 @@ from environment import Environment
 from visualization import update_matplotlib_plot
 
 N = 200
-M = 290
+M = 300
 NA = 750
 NB = 750
 N_AGENTS = 100

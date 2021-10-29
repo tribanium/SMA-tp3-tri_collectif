@@ -26,23 +26,23 @@ from visualization import update_altair_plot
 st.sidebar.header("General settings")
 
 N = st.sidebar.number_input(
-    label="Number of rows ?", min_value=1, max_value=99999, value=50)
+    label="Number of rows ?", min_value=1, max_value=99999, value=200)
 M = st.sidebar.number_input(
-    label="Number of columns ?", min_value=1, max_value=99999, value=50)
+    label="Number of columns ?", min_value=1, max_value=99999, value=300)
 NA = st.sidebar.number_input(
-    label="Number of objects of class A ?", min_value=1, max_value=99999, value=200)
+    label="Number of objects of class A ?", min_value=1, max_value=99999, value=750)
 NB = st.sidebar.number_input(
-    label="Number of objects of class B ?", min_value=1, max_value=99999, value=200)
+    label="Number of objects of class B ?", min_value=1, max_value=99999, value=750)
 N_AGENTS = st.sidebar.number_input(
-    label="Number of agents ?", min_value=1, max_value=99999, value=20)
+    label="Number of agents ?", min_value=1, max_value=99999, value=100)
 KPLUS = st.sidebar.slider(label="Value for K+ ?",
                           min_value=0., max_value=1., value=0.1)
 KMINUS = st.sidebar.slider(label="Value for K- ?",
                            min_value=0., max_value=1., value=0.3)
 MEMORY_BUFFER_SIZE = st.sidebar.number_input(
-    label="Size of memory buffer ?", min_value=1, max_value=99999, value=15)
+    label="Size of memory buffer ?", min_value=1, max_value=99999, value=50)
 N_ROUNDS = st.sidebar.number_input(
-    label="Number of rounds ?", min_value=1, max_value=1000000000, value=500000)
+    label="Number of rounds ?", min_value=1, max_value=1000000000, value=1000000)
 ERROR_RATE = st.sidebar.slider(
     label="Error rate", min_value=0., max_value=1., value=0., step=0.05)
 
