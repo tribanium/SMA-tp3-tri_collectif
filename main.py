@@ -53,7 +53,7 @@ def main(n_rounds, N, M, na, nb, n_agents, kplus, kminus, memory_buffer_size, er
             agent.action(env, empty_cells)
 
         if (round) % 50000 == 0:
-            update_matplotlib_plot(env, fig, ax)
+            update_matplotlib_plot(env, ax)
 
 
 if __name__ == '__main__':
