@@ -33,8 +33,6 @@ NA = st.sidebar.number_input(
     label="Number of objects of class A ?", min_value=1, max_value=99999, value=750)
 NB = st.sidebar.number_input(
     label="Number of objects of class B ?", min_value=1, max_value=99999, value=750)
-NC = st.sidebar.number_input(
-    label="Number of objects of class C ?", min_value=1, max_value=99999, value=750)
 N_AGENTS = st.sidebar.number_input(
     label="Number of agents ?", min_value=1, max_value=99999, value=100)
 KPLUS = st.sidebar.slider(label="Value for K+ ?",
@@ -45,15 +43,8 @@ MEMORY_BUFFER_SIZE = st.sidebar.number_input(
     label="Size of memory buffer ?", min_value=1, max_value=99999, value=50)
 N_ROUNDS = st.sidebar.number_input(
     label="Number of rounds ?", min_value=1, max_value=1000000000, value=1000000)
-
-RATIO = st.sidebar.slider(label="Value of the temporal decay factor of the pheromones ?",
-                          min_value=0., max_value=1., value=0.75)
-SIGNAL_RANGE = st.sidebar.number_input(label="Spatial range of the pheromones ?",
-                                       min_value=1, value=1)
-
-MAX_PATIENCE = st.sidebar.number_input(label="Patience for objects of type C ?",
-                                       min_value=1, max_value=100, value=15)
-
+ERROR_RATE = st.sidebar.slider(
+    label="Error rate", min_value=0., max_value=1., value=0., step=0.05)
 
 start = st.sidebar.button("Run")
 _ = st.sidebar.button("Stop")
@@ -76,9 +67,9 @@ st.header('Graph of the objects')
 plot_placeholder = st.empty()
 
 
-def main(n_rounds, N, M, na, nb, nc, n_agents, kplus, kminus, memory_buffer_size, ratio, signal_range, max_patience):
-    env = Environment(N, M, na, nb, nc, n_agents, kplus, kminus,
-                      memory_buffer_size, ratio, signal_range, max_patience)
+def main(n_rounds, N, M, na, nb, n_agents, kplus, kminus, memory_buffer_size, error_rate):
+    env = Environment(N, M, na, nb, n_agents, kplus, kminus,
+                      memory_buffer_size, error_rate)
 
     # Loop
     keys = list(env.agents.keys())
@@ -95,13 +86,11 @@ def main(n_rounds, N, M, na, nb, nc, n_agents, kplus, kminus, memory_buffer_size
             empty_cells = agent.perception(env)
             agent.action(env, empty_cells)
 
-        env.update_pheromones()
-
         if round % 50 == 0 or round == 1:
             fig = update_altair_plot(env)
             plot_placeholder.altair_chart(fig, use_container_width=True)
 
 
 if start:
-    main(N_ROUNDS, N, M, NA, NB, NC, N_AGENTS, KPLUS,
-         KMINUS, MEMORY_BUFFER_SIZE, RATIO, SIGNAL_RANGE, MAX_PATIENCE)
+    main(N_ROUNDS, N, M, NA, NB, N_AGENTS, KPLUS,
+         KMINUS, MEMORY_BUFFER_SIZE, ERROR_RATE)
